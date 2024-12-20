@@ -7,7 +7,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://chatify-vert-one.vercel.app"],
+    origin: ["https://chatify-by-karan.vercel.app"],
   },
 });
 

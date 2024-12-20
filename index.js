@@ -8,7 +8,7 @@ const { app, server } = require('./socket');
 
 app.use(
 	cors({
-	  origin: ['https://chatify-vert-one.vercel.app'],
+	  origin: ['https://chatify-by-karan.vercel.app'],
 	  method: ["GET", "POST", "DELETE", "PUT"],
 	  credentials: true,
 	})
