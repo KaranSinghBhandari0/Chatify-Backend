@@ -1,7 +1,8 @@
 const User = require("../models/user.js");
 const Message = require("../models/message.js");
 const {cloudinary} = require("../cloudConfig.js");
-const { getReceiverSocketId, io } = require('../socket.js')
+const { getReceiverSocketId, io } = require('../socket.js');
+const mongoose = require('mongoose');
 
 // finding all users
 const getUsers = async (req, res) => {
@@ -71,4 +72,36 @@ const getMessages = async (req, res) => {
     }
 };
 
-module.exports = {getUsers, getMessages, sendMessage}
+// clear chat
+const clearChat = async (req, res) => {
+    try {
+        const { receiverId } = req.params;
+        const currUser = req.user;
+
+        if (!currUser || !currUser._id) {
+            return res.status(400).json({ error: "Current user is not authenticated." });
+        }
+
+        if (!receiverId) {
+            return res.status(400).json({ error: "Receiver ID is missing." });
+        }
+
+        // Convert receiverId to ObjectId
+        const receiverObjectId = new mongoose.Types.ObjectId(receiverId);
+
+        // Delete chat messages between the current user and the receiver
+        await Message.deleteMany({
+            $or: [
+                { senderId: currUser._id, receiverId: receiverObjectId },
+                { senderId: receiverObjectId, receiverId: currUser._id }
+            ]
+        });
+
+        res.status(200).json({ message: "Chat deleted successfully" });
+    } catch (error) {
+        console.error("Error in clearChat controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+module.exports = {getUsers, getMessages, sendMessage, clearChat}

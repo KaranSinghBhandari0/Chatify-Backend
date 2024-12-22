@@ -7,7 +7,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://chatify-by-karan.vercel.app"],
+    origin: [process.env.FRONTEND_URL, 'http://localhost:5173'],
   },
 });
 

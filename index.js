@@ -8,11 +8,12 @@ const { app, server } = require('./socket');
 
 app.use(
 	cors({
-	  origin: ['https://chatify-by-karan.vercel.app'],
+	  origin: [process.env.FRONTEND_URL, 'http://localhost:5173'],
 	  method: ["GET", "POST", "DELETE", "PUT"],
 	  credentials: true,
 	})
 );
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const jwt = require('jsonwebtoken');
 const {cloudinary} = require('../cloudConfig');
+const { transporter } = require('../lib/nodemailer');
 
 // cookies option
 const cookieOptions = {
@@ -110,4 +111,121 @@ const updateProfile = async (req, res) => {
     }
 };
 
-module.exports = { signup, login, logout, checkAuth, updateProfile };
+const updatePassword = async (req, res) => {
+    try {
+        const { current:currPassword, new:newPassword } = req.body;
+
+        if (!currPassword || !newPassword) {
+            return res.status(400).json({ message: "Current and new passwords are required." });
+        }
+
+        const user = await User.findById(req.user.id);
+
+        const isMatch = await bcrypt.compare(currPassword, user.password);
+        if(!isMatch) {
+            return res.status(401).json({ message: "Wrong Password" });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ message: "Password updated successfully." });
+    } catch (error) {
+        console.error("Error in update password:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+const sendOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
+
+        user.otp = otp;
+        user.otpExpiresAt = expiresAt;
+        await user.save();
+
+        await transporter.sendMail({
+            from: 'chatify_@gmail.com',
+            to: email,
+            subject: "OTP to reset Chatify Password",
+            html: `<h1>Your OTP Code</h1><p>Use the following OTP to verify: <strong>${otp}</strong></p>`
+        });
+
+        res.status(200).send({ message: 'OTP sent' });
+    } catch (error) {
+        res.status(500).send({ message: 'Failed to send OTP', error });
+    }
+};
+
+const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentTime = Date.now();
+        
+        // Check if OTP is valid and within 5-minute window
+        if (user.otp === otp && currentTime <= user.otpExpiresAt) {
+            // Clear OTP after successful verification
+            user.otp = undefined; 
+            user.otpExpiresAt = undefined; 
+            await user.save();
+
+            return res.status(200).send({ message: 'OTP verified successfully' });
+        } else {
+            return res.status(400).send({ message: 'Invalid or expired OTP' });
+        }
+    } catch (error) {
+        res.status(500).send({ message: 'Failed to verify OTP', error });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { email, newPassword, confirmNewPassword } = req.body;
+
+    // Validate input
+    if(!email || !newPassword || !confirmNewPassword) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if(newPassword !== confirmNewPassword) {
+        return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    try {
+        // Find user by email
+        const user = await User.findOne({ email });
+        if(!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update user's password
+        user.password = hashedPassword;
+        await user.save();
+
+        return res.status(200).json({ message: 'Password reset successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { signup, login, logout, checkAuth, updateProfile, updatePassword, sendOTP, verifyOTP,resetPassword };

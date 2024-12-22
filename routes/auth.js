@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require("path");
 
-const { signup, login, logout, checkAuth, updateProfile } = require('../controllers/auth');
+const { signup, login, logout, checkAuth, updateProfile, updatePassword, sendOTP, verifyOTP, resetPassword } = require('../controllers/auth');
 const { isAuthenticated } = require('../middlewares/auth');
 
 // Multer config
@@ -24,5 +24,9 @@ router.post("/login", login);
 router.get("/logout", logout);
 router.get("/check", isAuthenticated, checkAuth);
 router.put("/update-profile", isAuthenticated, upload.single('image'), updateProfile);
+router.post("/updatePassword", isAuthenticated, updatePassword);
+router.post("/send-otp", sendOTP);
+router.post("/verify-otp", verifyOTP);
+router.post("/resetPassword", resetPassword);
 
 module.exports = router;
