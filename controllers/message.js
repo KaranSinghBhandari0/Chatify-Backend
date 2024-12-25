@@ -104,4 +104,27 @@ const clearChat = async (req, res) => {
     }
 };
 
-module.exports = {getUsers, getMessages, sendMessage, clearChat}
+// search a user
+const searchUser = async (req, res) => {
+    try {
+        const { searchInput } = req.body;
+
+        if(!searchInput) {
+            return res.status(400).json({ error: "Search input is required" });
+        }
+        
+        const users = await User.find({
+            $or: [
+                { username: { $regex: searchInput, $options: "i" } },
+                { email: { $regex: searchInput, $options: "i" } }
+            ],
+        });
+
+        res.status(200).json({users});
+    } catch (error) {
+        console.error("Error in SeachUser controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+module.exports = {getUsers, getMessages, sendMessage, clearChat, searchUser}
